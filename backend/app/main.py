@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api import auth
 from .models import Base
+from .database import engine
 
 app = FastAPI(title="Repair Delivery API")
 
