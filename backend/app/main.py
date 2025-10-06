@@ -4,6 +4,10 @@ from .api import auth
 
 app = FastAPI(title="Repair Delivery API")
 
+@app.on_event("startup")
+def startup_event():
+    Base.metadata.create_all(bind=engine)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

@@ -17,11 +17,28 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   bool _isLoading = false;
   bool _showCodeInput = false;
   String _sentPhone = '';
+  bool _isPhoneValid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneController.addListener(_updatePhoneValidation);
+  }
 
   @override
   void dispose() {
+    _phoneController.removeListener(_updatePhoneValidation);
     _phoneController.dispose();
     super.dispose();
+  }
+
+  void _updatePhoneValidation() {
+    final isValid = _isValidPhone(_phoneController.text);
+    if (_isPhoneValid != isValid) {
+      setState(() {
+        _isPhoneValid = isValid;
+      });
+    }
   }
 
   void _requestCode() async {
@@ -42,8 +59,11 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     }
   }
 
-  bool _isValidPhone(String phone) {
-    return phone.length == 18 && phone.startsWith('+7');
+  bool _isValidPhone(String maskedPhone) {
+    // Удаляем всё, кроме цифр
+    final cleaned = maskedPhone.replaceAll(RegExp(r'\D'), '');
+    // Должно быть ровно 11 цифр: 79001234567
+    return cleaned.length == 11 && cleaned.startsWith('7');
   }
 
   void _verifyCode(String code) async {
@@ -97,7 +117,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
-                      onPressed: _isLoading || !_isValidPhone(_phoneController.text) ? null : _requestCode,
+                      onPressed: _isLoading || !_isPhoneValid ? null : _requestCode,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF3B82F6),
                         minimumSize: const Size(double.infinity, 56),
