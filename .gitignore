@@ -1,0 +1,26 @@
+# Flutter
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/key.properties
+**/android/app/build
+**/ios/Flutter/
+**/ios/.symlinks/
+**/ios/Podfile.lock
+**/ios/Pods/
+**/build/
+**/.dart_tool/
+**/.pub-cache/
+**/.packages
+
+# Backend
+backend/.env
+backend/__pycache__/
+backend/*.pyc
+backend/alembic/versions/*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

@@ -1,0 +1,40 @@
+# 📄 docker-compose.yml
+# Для запуска: docker-compose up -d
+# Требуется Docker и Docker Compose
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: repair_delivery
+      POSTGRES_USER: repair_user
+      POSTGRES_PASSWORD: strong_password_123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # опционально: инициализация БД
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repair_user -d repair_delivery"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://repair_user:strong_password_123@db:5432/repair_delivery
+      SECRET_KEY: your_strong_secret_key_here_change_in_production
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app  # для hot-reload в dev (опционально)
+
+volumes:
+  postgres_data:
