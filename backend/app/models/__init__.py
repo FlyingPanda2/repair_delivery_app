@@ -2,6 +2,6 @@
 from .base import Base
 from .user import User
 from .order import Order
-# ... другие модели
+from .pvz import PVZ  # ← ДОБАВЬТЕ ЭТУ СТРОКУ
 
-__all__ = ["Base", "User", "Order"]
+__all__ = ["Base", "User", "Order", "PVZ"]
