@@ -22,6 +22,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   @override
   void initState() {
     super.initState();
+    _phoneController.text = '+7 ';
+    _phoneController.selection = TextSelection.collapsed(offset: _phoneController.text.length);
+
     _phoneController.addListener(_updatePhoneValidation);
   }
 
@@ -42,14 +45,19 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   }
 
   void _requestCode() async {
-    final phone = _phoneController.text;
-    if (!_isValidPhone(phone)) return;
+    final maskedPhone = _phoneController.text;
+    if (!_isValidPhone(maskedPhone)) return;
+
+    // Очищаем номер от всего, кроме цифр
+    final cleanedPhone = maskedPhone.replaceAll(RegExp(r'\D'), '');
+    // Форматируем как +7...
+    final phoneToSend = '+$cleanedPhone'; // → "+79001234567"
 
     setState(() => _isLoading = true);
     try {
-      await ApiService.requestCode(phone);
+      await ApiService.requestCode(phoneToSend); // ← Отправляем чистый номер
       setState(() {
-        _sentPhone = phone;
+        _sentPhone = phoneToSend; // Сохраняем именно тот номер, что ушёл на сервер
         _showCodeInput = true;
         _isLoading = false;
       });
@@ -67,15 +75,35 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   }
 
   void _verifyCode(String code) async {
-  setState(() => _isLoading = true);
-  try {
-    final token = await ApiService.verifyCode(_sentPhone, code);
-    await AuthService.saveToken(token); // ← СОХРАНЯЕМ ТОКЕН
-    Navigator.of(context).pushReplacementNamed('/main');
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Неверный код')));
-    setState(() => _isLoading = false);
-  }}
+    setState(() => _isLoading = true);
+    try {
+      // Гарантируем, что номер в формате +79001234567
+      String normalizedPhone = _sentPhone;
+
+      // Если вдруг там остались нецифровые символы (кроме + в начале) — очищаем
+      if (!normalizedPhone.startsWith('+')) {
+        // Если по какой-то причине нет '+', добавляем
+        final digitsOnly = normalizedPhone.replaceAll(RegExp(r'\D'), '');
+        normalizedPhone = '+$digitsOnly';
+      } else {
+        // Убираем всё, кроме '+' и цифр
+        final digitsPart = normalizedPhone.substring(1).replaceAll(RegExp(r'\D'), '');
+        normalizedPhone = '+$digitsPart';
+      }
+
+      // Убедимся, что длина правильная: +7 + 10 цифр = 12 символов
+      if (normalizedPhone.length != 12 || !normalizedPhone.startsWith('+7')) {
+        throw Exception('Invalid phone format');
+      }
+
+      final token = await ApiService.verifyCode(normalizedPhone, code);
+      await AuthService.saveToken(token);
+      Navigator.of(context).pushReplacementNamed('/main');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Неверный код')));
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,15 +137,19 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       controller: _phoneController,
                       inputFormatters: [_maskFormatter],
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Номер телефона',
-                        prefixIcon: Text('🇷🇺  '),
-                        border: OutlineInputBorder(),
+                        prefixIcon: Container(
+                          alignment: Alignment.center,
+                          width: 56, // ширина как у иконки
+                          child: const Text('RU', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
-                      onPressed: _isLoading || !_isPhoneValid ? null : _requestCode,
+                      onPressed:_isPhoneValid ? _requestCode : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF3B82F6),
                         minimumSize: const Size(double.infinity, 56),
